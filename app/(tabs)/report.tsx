@@ -114,8 +114,8 @@ const ReportsScreen = () => {
 
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.9,
+      aspect: [3, 4],
+      quality: 0.1,
       base64: false,
     });
 
