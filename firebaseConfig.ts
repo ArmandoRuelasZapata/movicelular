@@ -1,18 +1,18 @@
-import { getApps, initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+  apiKey: "AIzaSyCfwkyv2JPaHb8u06Ab7VcH2v9QJEwRnmY",
+  authDomain: "reportes-proyecto-idor.firebaseapp.com",
+  projectId: "reportes-proyecto-idor",
+  storageBucket: "reportes-proyecto-idor.firebasestorage.app",
+  messagingSenderId: "635696829226",
+  appId: "1:635696829226:web:a8b40553eb5b23528b0453",
 };
 
-// ✅ Solo inicializa si no existe ya una app
-const app =
-  getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-const db = getFirestore(app);
+// Si ya existe una app llamada "reportes", la usamos. Si no, la inicializamos con ese nombre.
+const appReportes = !getApps().length 
+  ? initializeApp(firebaseConfig, "reportes") 
+  : getApps().find(a => a.name === "reportes") || initializeApp(firebaseConfig, "reportes");
 
-export { db };
+export const db = getFirestore(appReportes);

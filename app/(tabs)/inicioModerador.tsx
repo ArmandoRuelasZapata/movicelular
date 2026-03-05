@@ -10,7 +10,7 @@ import MapView, { Marker } from "react-native-maps";
 import { AppColors, ASPECT_RATIO, GlobalStyles } from "./GlobalStyles";
 
 import { auth } from "../../firebaseConfigUsuarios";
-import { collection, doc, getDoc, onSnapshot, query, where } from "firebase/firestore";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { dbMapa } from "../../firebaseConfigMapa";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -96,7 +96,6 @@ const CustomMarker = ({ tipo, size = "normal" }: { tipo?: string, size?: "normal
   );
 };
 
-// ─── Constantes de Durango ────────────────────────────────────────────────────
 const DURANGO_REGION = {
   latitude: 24.0277, longitude: -104.6531,
   latitudeDelta: 0.05, longitudeDelta: 0.05 * ASPECT_RATIO,
@@ -114,14 +113,14 @@ const MapScreen = () => {
   const [reportesPublicos, setReportesPublicos] = useState<ReportePublico[]>([]);
   const [reporteSeleccionado, setReporteSeleccionado] = useState<ReportePublico | null>(null);
 
-  // 1. EFECTO: Lógica de detección de reporte exitoso (BASADO EN TU VERSIÓN ANTERIOR)
+  // 1. EFECTO: Detección de reporte exitoso para el moderador
   useEffect(() => {
     if (params.mostrarAlerta === "true") {
       setShowSuccess(true);
     }
   }, [params]);
 
-  // 2. FUNCIÓN: Cerrar alerta y limpiar URL (BASADO EN TU VERSIÓN ANTERIOR)
+  // 2. FUNCIÓN: Cerrar alerta y limpiar parámetros de la URL
   const cerrarAlertaExito = () => {
     setShowSuccess(false);
     router.setParams({
@@ -131,7 +130,7 @@ const MapScreen = () => {
     });
   };
 
-  // 3. EFECTO: Escuchar reportes de Firebase
+  // 3. EFECTO: Carga de reportes desde Firebase
   useEffect(() => {
     const q = query(collection(dbMapa, "reportes_publicos"), where("favorito", "==", true));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -223,14 +222,13 @@ const MapScreen = () => {
         ))}
       </MapView>
 
-      {/* ── POPUP FLOTANTE (ESTILO TARJETA) ── */}
+      {/* POPUP DE REPORTE */}
       {reporteSeleccionado && cfgSeleccionado && (
         <View style={localStyles.popupContainer} pointerEvents="box-none">
           <View style={[localStyles.popupCard, { borderTopColor: cfgSeleccionado.bgColor, borderTopWidth: 5 }]}>
             <TouchableOpacity style={localStyles.popupClose} onPress={() => setReporteSeleccionado(null)}>
               <Ionicons name="close" size={18} color="#555" />
             </TouchableOpacity>
-
             <View style={localStyles.popupHeader}>
               <View style={[localStyles.popupBadge, { backgroundColor: cfgSeleccionado.bgColor }]}>
                 {renderPopupIcon()}
@@ -238,9 +236,7 @@ const MapScreen = () => {
               </View>
               <Text style={localStyles.popupId}>#{reporteSeleccionado.id.substring(0, 5).toUpperCase()}</Text>
             </View>
-
             <Text style={localStyles.popupTitle}>{reporteSeleccionado.titulo || "Incidencia"}</Text>
-
             <View style={localStyles.popupBody}>
               <View style={{ flex: 1 }}>
                 <Text style={localStyles.popupLabel}>Descripción:</Text>
@@ -252,12 +248,11 @@ const MapScreen = () => {
                 <View style={localStyles.popupNoImage}><Ionicons name="image-outline" size={30} color="#CCC" /></View>
               )}
             </View>
-            <View style={[localStyles.popupArrow, { borderTopColor: "#FFF" }]} />
           </View>
         </View>
       )}
 
-      {/* ── SIMBOLOGÍA ── */}
+      {/* SIMBOLOGÍA */}
       {!reporteSeleccionado && (
         <View style={localStyles.legend}>
           <Text style={localStyles.legendTitle}>Incidencias</Text>
@@ -270,27 +265,30 @@ const MapScreen = () => {
         </View>
       )}
 
-      {/* NAV BAR */}
+      {/* NAV BAR MODERADOR */}
       <View style={GlobalStyles.bottomNav}>
-        <TouchableOpacity style={GlobalStyles.navItem} onPress={() => router.push("/inicio")}>
+        <TouchableOpacity style={GlobalStyles.navItem} onPress={() => router.push("/(tabs)/inicioModerador")}>
           <Ionicons name="home" size={28} color={AppColors.TEXT_LIGHT} />
           <Text style={GlobalStyles.navText}>Inicio</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={localStyles.navItemCenter} onPress={() => router.push("/report")}>
+        <TouchableOpacity style={localStyles.navItemCenter} onPress={() => router.push("/(tabs)/reportModerador")}>
           <View style={localStyles.centerOuterCircle}>
-            <View style={localStyles.centerInnerCircle}><Ionicons name="add" size={30} color={AppColors.PRIMARY} /></View>
+            <View style={localStyles.centerInnerCircle}>
+              <Ionicons name="add" size={30} color={AppColors.PRIMARY} />
+              </View>
+              
           </View>
           <Text style={GlobalStyles.navText}>Crear Reporte</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={GlobalStyles.navItem} onPress={() => router.push("/explore")}>
+        <TouchableOpacity style={GlobalStyles.navItem} onPress={() => router.push("/(tabs)/moderatorMenu")}>
           <View style={GlobalStyles.accountCircle}><Ionicons name="person" size={24} color={AppColors.PRIMARY} /></View>
           <Text style={GlobalStyles.navText}>Cuenta</Text>
         </TouchableOpacity>
       </View>
 
-      {/* --- MODAL DE ÉXITO INTEGRADO --- */}
+      {/* --- MODAL DE ÉXITO (Lógica del anterior) --- */}
       <Modal visible={showSuccess} transparent animationType="fade">
         <View style={localStyles.modalOverlay}>
           <View style={localStyles.modalBox}>
@@ -308,12 +306,10 @@ const MapScreen = () => {
           </View>
         </View>
       </Modal>
-
     </View>
   );
 };
 
-// ─── Estilos ──────────────────────────────────────────────────────────────────
 const markerStyles = StyleSheet.create({
   ring: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, justifyContent: "center", alignItems: "center", elevation: 5 },
   circle: { width: 32, height: 32, borderRadius: 16, justifyContent: "center", alignItems: "center" },
@@ -322,7 +318,6 @@ const markerStyles = StyleSheet.create({
 });
 
 const localStyles = StyleSheet.create({
-  // Popups y Leyenda
   popupContainer: { position: "absolute", top: 80, left: 15, right: 15, zIndex: 100 },
   popupCard: { backgroundColor: "#FFF", borderRadius: 15, padding: 15, elevation: 12 },
   popupClose: { position: "absolute", top: 12, right: 12, backgroundColor: "#F0F0F0", borderRadius: 15, padding: 4 },
@@ -336,19 +331,17 @@ const localStyles = StyleSheet.create({
   popupDesc: { fontSize: 13, color: "#444" },
   popupImage: { width: 80, height: 80, borderRadius: 10 },
   popupNoImage: { width: 80, height: 80, borderRadius: 10, backgroundColor: "#F5F5F5", justifyContent: "center", alignItems: "center" },
-  popupArrow: { alignSelf: "center", width: 0, height: 0, borderLeftWidth: 10, borderRightWidth: 10, borderTopWidth: 12, borderLeftColor: "transparent", borderRightColor: "transparent", marginTop: 10 },
   
   legend: { position: "absolute", bottom: 100, left: 15, backgroundColor: "rgba(255,255,255,0.95)", borderRadius: 12, padding: 10, elevation: 5 },
   legendTitle: { fontSize: 10, fontWeight: "bold", color: "#888", marginBottom: 5, textTransform: "uppercase" },
   legendRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 5 },
   legendLabel: { fontSize: 12, color: "#333", fontWeight: "600" },
 
-  // Nav Bar
   navItemCenter: { flex: 1, alignItems: "center", marginTop: -25 },
   centerOuterCircle: { backgroundColor: AppColors.PRIMARY, padding: 2, borderRadius: 30, borderWidth: 4, borderColor: "#FFF" },
   centerInnerCircle: { backgroundColor: "#FFF", width: 46, height: 46, borderRadius: 23, justifyContent: "center", alignItems: "center" },
 
-  // Estilos del Modal (MANTENIDOS)
+  // Estilos Modal de éxito
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
   modalBox: { width: "75%", backgroundColor: "#E0E0E0", borderRadius: 20, padding: 25, alignItems: "center" },
   modalTitle: { fontSize: 22, fontWeight: "bold", textAlign: "center", marginBottom: 15 },

@@ -1,173 +1,206 @@
 import React, { useState } from "react";
-import {
-    Alert,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+import { 
+  Alert, 
+  SafeAreaView, 
+  StyleSheet, 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  View, 
+  ActivityIndicator, 
+  ScrollView 
 } from "react-native";
-
 import { useRouter } from "expo-router";
-import { AppColors, GlobalStyles } from "./GlobalStyles";
+import { auth, db } from "../../firebaseConfigUsuarios"; 
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
 
 const RegisterScreen = () => {
   const router = useRouter();
-
   const [nombre, setNombre] = useState("");
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
+    // 1. Validar campos vacíos
     if (!nombre || !correo || !password || !confirmPassword) {
       Alert.alert("Error", "Completa todos los campos");
       return;
     }
 
+    // 2. Validar mínimo de caracteres (NUEVO)
+    if (password.length < 6) {
+      Alert.alert("Error", "La contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+
+    // 3. Validar coincidencia
     if (password !== confirmPassword) {
       Alert.alert("Error", "Las contraseñas no coinciden");
       return;
     }
 
-    Alert.alert("Registro exitoso");
+    setLoading(true);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, correo.trim(), password);
+      const user = userCredential.user;
+
+      await setDoc(doc(db, "usuarios", user.uid), {
+        uid: user.uid,
+        nombre: nombre,
+        correo: correo.toLowerCase(),
+        rol: "usuario",
+        estado: "activo",
+        fechaRegistro: new Date(),
+      });
+
+      router.replace("/(tabs)/inicio");
+    } catch (error: any) {
+      // Manejo de errores específico de Firebase
+      let errorMessage = "No se pudo crear la cuenta";
+      if (error.code === "auth/email-already-in-use") {
+        errorMessage = "Este correo ya está registrado";
+      } else if (error.code === "auth/invalid-email") {
+        errorMessage = "El formato del correo es inválido";
+      }
+      
+      Alert.alert("Error", errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <View style={GlobalStyles.container}>
-      <SafeAreaView style={localStyles.safeArea}>
-        <Text style={[localStyles.title, GlobalStyles.textBase]}>Registro</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.container}>
+        
+        <Text style={styles.headerTitle}>Registro</Text>
 
-        <View style={localStyles.form}>
-          <Text style={[localStyles.label, localStyles.textBase]}>Nombre:</Text>
-          <TextInput
-            style={[localStyles.input, GlobalStyles.textBase]}
-            value={nombre}
-            onChangeText={setNombre}
+        <View style={styles.form}>
+          <Text style={styles.label}>Nombre:</Text>
+          <TextInput 
+            style={styles.input} 
+            value={nombre} 
+            onChangeText={setNombre} 
+            placeholder="Tu nombre completo"
           />
 
-          <Text style={[localStyles.label, localStyles.textBase]}>
-            Correo electrónico
-          </Text>
-          <TextInput
-            style={[localStyles.input, GlobalStyles.textBase]}
+          <Text style={styles.label}>Correo electrónico</Text>
+          <TextInput 
+            style={styles.input} 
+            value={correo} 
+            onChangeText={setCorreo} 
             keyboardType="email-address"
             autoCapitalize="none"
-            value={correo}
-            onChangeText={setCorreo}
+            placeholder="ejemplo@correo.com"
           />
 
-          <Text style={[localStyles.label, localStyles.textBase]}>
-            Contraseña
-          </Text>
-          <TextInput
-            style={[localStyles.input, GlobalStyles.textBase]}
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
+          <Text style={styles.label}>Contraseña</Text>
+          <TextInput 
+            style={styles.input} 
+            value={password} 
+            onChangeText={setPassword} 
+            secureTextEntry 
+            placeholder="Mínimo 6 caracteres"
           />
 
-          <Text style={[localStyles.label, localStyles.textBase]}>
-            Confirmar contraseña
-          </Text>
-          <TextInput
-            style={[localStyles.input, GlobalStyles.textBase]}
-            secureTextEntry
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
+          <Text style={styles.label}>Confirmar contraseña</Text>
+          <TextInput 
+            style={styles.input} 
+            value={confirmPassword} 
+            onChangeText={setConfirmPassword} 
+            secureTextEntry 
+            placeholder="Repite tu contraseña"
           />
 
-          <TouchableOpacity
-            style={localStyles.registerButton}
-            onPress={handleRegister}
+          <TouchableOpacity 
+            style={styles.button} 
+            onPress={handleRegister} 
+            disabled={loading}
           >
-            <Text style={localStyles.registerButtonText}>Registrarse</Text>
+            {loading ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <Text style={styles.buttonText}>Registrarse</Text>
+            )}
           </TouchableOpacity>
 
-          <View style={localStyles.loginContainer}>
-            <Text style={[localStyles.loginText, GlobalStyles.textBase]}>
-              ¿Ya tienes una cuenta?
-            </Text>
-
-            <TouchableOpacity onPress={() => router.push("./LoginScreen")}>
-              <Text style={[localStyles.loginLink, GlobalStyles.textBase]}>
-                Iniciar sesión
-              </Text>
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>¿Ya tienes una cuenta? </Text>
+            <TouchableOpacity onPress={() => router.push("/(tabs)/LoginScreen")}>
+              <Text style={styles.linkText}>Iniciar sesión</Text>
             </TouchableOpacity>
           </View>
         </View>
-      </SafeAreaView>
-    </View>
+
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
-const localStyles = StyleSheet.create({
+const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    backgroundColor: "#F5F5F5",
+  },
+  container: {
+    flexGrow: 1,
     paddingHorizontal: 30,
-  },
-
-  title: {
-    fontSize: 26,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginTop: 30,
-    marginBottom: 40,
-    color: AppColors.TEXT_DARK,
-  },
-
-  form: {
-    flex: 1,
-  },
-  textBase: {
-    fontFamily: "Arimo-Regular",
-    fontWeight: "bold",
-  },
-
-  label: {
-    fontSize: 15,
-    marginBottom: 6,
-    color: AppColors.TEXT_DARK,
-  },
-
-  input: {
-    borderWidth: 1,
-    borderColor: "#CCC",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 18,
-    backgroundColor: "#FFF",
-  },
-
-  registerButton: {
-    backgroundColor: AppColors.PRIMARY, // tu verde/azulito
-    paddingVertical: 13,
-    borderRadius: 10,
+    paddingTop: 60,
     alignItems: "center",
-    marginTop: 10,
   },
-
-  registerButtonText: {
-    color: "#FFF",
-    fontSize: 16,
+  headerTitle: {
+    fontSize: 32,
     fontWeight: "bold",
+    color: "#000",
+    marginBottom: 40,
   },
-
-  loginContainer: {
+  form: {
+    width: "100%",
+  },
+  label: {
+    fontSize: 16,
+    color: "#000",
+    marginBottom: 8,
+    fontWeight: "500",
+  },
+  input: {
+    backgroundColor: "#EEEEEE",
+    borderWidth: 1,
+    borderColor: "#CCCCCC",
+    borderRadius: 12,
+    padding: 15,
+    fontSize: 14,
+    marginBottom: 20,
+    color: "#777777",
+  },
+  button: {
+    backgroundColor: "#0E8388",
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    marginTop: 20,
+    elevation: 3,
+  },
+  buttonText: {
+    color: "#FFF",
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  footer: {
     flexDirection: "row",
     justifyContent: "center",
     marginTop: 25,
   },
-
-  loginText: {
-    color: "#444",
-    marginRight: 5,
+  footerText: {
+    color: "#666",
+    fontSize: 15,
   },
-
-  loginLink: {
-    color: AppColors.PRIMARY,
+  linkText: {
+    color: "#0E8388",
+    fontSize: 15,
     fontWeight: "bold",
   },
 });

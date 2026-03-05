@@ -1,9 +1,8 @@
-import { Tabs } from "expo-router";
-import React from "react";
-
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { Tabs } from "expo-router";
+import React from "react";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -13,10 +12,20 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
         headerShown: false,
-        tabBarStyle: { display: "none" }, // 👈 OCULTA EL TAB BAR
-        tabBarItemStyle: { display: "none" }, // 👈 OCULTA EL BOTÓN
+        // 👇 OCULTA LA BARRA COMPLETA PARA TODAS LAS PANTALLAS
+        tabBarStyle: { display: "none" },
+        // 👇 OCULTA LOS BOTONES PARA TODAS LAS PANTALLAS
+        tabBarButton: () => null,
       }}
     >
+      {/* LoginScreen será la primera pantalla en cargar por su posición */}
+      <Tabs.Screen
+        name="LoginScreen"
+        options={{
+          title: "Login",
+        }}
+      />
+
       <Tabs.Screen
         name="inicio"
         options={{
@@ -37,7 +46,7 @@ export default function TabLayout() {
         }}
       />
 
-      {/* MENÚ OCULTO */}
+      {/* Agregamos el menú de moderador por si acaso */}
       <Tabs.Screen
         name="moderatorMenu"
         options={{
