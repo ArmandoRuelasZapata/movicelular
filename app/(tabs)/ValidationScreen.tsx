@@ -1,80 +1,119 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { collection, getDocs, orderBy, query } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { db } from "../../firebaseConfig"; // Ajusta esta ruta a tu config de Firebase
-import { AppColors, GlobalStyles } from "../(tabs)/GlobalStyles"; // Ajusta esta ruta
+import { db } from "../../firebaseConfig";
 
-// Interfaz básica para la lista
+// ✅ auth del proyecto 'usuarios' donde vive la sesión activa del moderador
+import { auth } from "../../firebaseConfigUsuarios";
+
+import { AppColors, GlobalStyles } from "../(tabs)/GlobalStyles";
+
 interface ReportPreview {
   id: string;
   titulo?: string;
   estatus?: string;
-  created_at?: { toDate: () => Date } | string;
+  moderador_asignado_uid?: string;
+  created_at?: { toDate: () => Date } | string | null;
 }
 
-// Helpers visuales (Mismos que usaste en tu TrackingScreen para consistencia)
+// ── Helpers visuales ──────────────────────────────────────────────────────────
 const getStatusColor = (estatus?: string): string => {
   switch (estatus?.toLowerCase()) {
-    case "finalizado": return "#00C49A";
+    case "finalizado":
+      return "#00C49A";
     case "revision":
-    case "revisión": return "#FFC107";
+    case "revisión":
+      return "#FFC107";
     case "atencion":
-    case "atención": return AppColors.PRIMARY;
-    default: return "#999";
+    case "atención":
+      return AppColors.PRIMARY;
+    default:
+      return "#999";
   }
 };
 
 const getStatusLabel = (estatus?: string): string => {
   switch (estatus?.toLowerCase()) {
-    case "finalizado": return "Finalizado";
+    case "finalizado":
+      return "Finalizado";
     case "revision":
-    case "revisión": return "En Revisión";
+    case "revisión":
+      return "En Revisión";
     case "atencion":
-    case "atención": return "En Atención";
-    default: return "Pendiente";
+    case "atención":
+      return "En Atención";
+    default:
+      return "Pendiente";
   }
 };
 
-const formatDate = (raw?: { toDate: () => Date } | string): string => {
+const formatDate = (raw?: { toDate: () => Date } | string | null): string => {
   if (!raw) return "--";
   const date = typeof raw === "string" ? new Date(raw) : raw.toDate();
-  return date.toLocaleDateString("es-MX"); // Solo fecha para la lista
+  return date.toLocaleDateString("es-MX");
+};
+
+// Helper para ordenar por fecha en el cliente
+const toDate = (raw?: { toDate: () => Date } | string | null): Date => {
+  if (!raw) return new Date(0);
+  if (typeof raw === "string") return new Date(raw);
+  return raw.toDate();
 };
 
 export default function ValidationScreen() {
   const router = useRouter();
   const [reports, setReports] = useState<ReportPreview[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sinSesion, setSinSesion] = useState(false);
 
   useEffect(() => {
-    fetchAllReports();
+    fetchAssignedReports();
   }, []);
 
-  const fetchAllReports = async () => {
+  const fetchAssignedReports = async () => {
+    setLoading(true);
+
+    // ✅ Obtenemos el UID del moderador autenticado
+    const user = auth.currentUser;
+
+    if (!user) {
+      setSinSesion(true);
+      setLoading(false);
+      return;
+    }
+
     try {
-      // Obtenemos todos los reportes, ordenados por fecha de creación (los más nuevos primero)
-      // Nota: Si no tienes índice en Firebase para 'created_at', quita el orderBy temporalmente.
-      const q = query(collection(db, "reportes"), orderBy("created_at", "desc"));
+      // ✅ Filtramos solo los reportes asignados a este moderador
+      const q = query(
+        collection(db, "reportes"),
+        where("moderador_asignado_uid", "==", user.uid),
+      );
       const querySnapshot = await getDocs(q);
-      
-      const loadedReports: ReportPreview[] = [];
-      querySnapshot.forEach((doc) => {
-        loadedReports.push({ id: doc.id, ...doc.data() } as ReportPreview);
-      });
-      
+
+      const loadedReports: ReportPreview[] = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...(doc.data() as Omit<ReportPreview, "id">),
+      }));
+
+      // Ordenamos del más reciente al más antiguo en el cliente
+      loadedReports.sort(
+        (a, b) =>
+          toDate(b.created_at).getTime() - toDate(a.created_at).getTime(),
+      );
+
       setReports(loadedReports);
     } catch (error) {
-      console.error("Error al cargar reportes:", error);
+      console.error("Error al cargar reportes asignados:", error);
     } finally {
       setLoading(false);
     }
@@ -83,9 +122,12 @@ export default function ValidationScreen() {
   const renderItem = ({ item }: { item: ReportPreview }) => (
     <TouchableOpacity
       style={localStyles.card}
-      // AQUÍ ES LA CONEXIÓN MÁGICA AL TRACKING SCREEN:
-      // Pasamos el ID del reporte a tu pantalla TrackingScreen
-      onPress={() => router.push({ pathname: "./seguimientoModerador", params: { id: item.id } })}
+      onPress={() =>
+        router.push({
+          pathname: "./seguimientoModerador",
+          params: { id: item.id },
+        })
+      }
     >
       <View style={localStyles.cardHeader}>
         <Text style={localStyles.reportId}>
@@ -99,8 +141,15 @@ export default function ValidationScreen() {
       </Text>
 
       <View style={localStyles.cardFooter}>
-        <View style={[localStyles.statusBadge, { backgroundColor: getStatusColor(item.estatus) }]}>
-          <Text style={localStyles.statusText}>{getStatusLabel(item.estatus)}</Text>
+        <View
+          style={[
+            localStyles.statusBadge,
+            { backgroundColor: getStatusColor(item.estatus) },
+          ]}
+        >
+          <Text style={localStyles.statusText}>
+            {getStatusLabel(item.estatus)}
+          </Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color="#666" />
       </View>
@@ -108,34 +157,84 @@ export default function ValidationScreen() {
   );
 
   return (
-    <SafeAreaView style={[GlobalStyles.container, { backgroundColor: AppColors.PRIMARY }]}>
-      {/* Header Teal */}
-      <View style={[GlobalStyles.headerContainer, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}>
-        <View style={[GlobalStyles.profileHeader, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}>
-          <TouchableOpacity 
-      onPress={() => router.replace("/(tabs)/moderatorMenu")} 
-      style={{ padding: 5 }}
+    <SafeAreaView
+      style={[GlobalStyles.container, { backgroundColor: AppColors.PRIMARY }]}
     >
-            <Ionicons name="arrow-back" size={24} color={AppColors.TEXT_LIGHT} />
+      {/* Header */}
+      <View
+        style={[
+          GlobalStyles.headerContainer,
+          { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
+        ]}
+      >
+        <View
+          style={[
+            GlobalStyles.profileHeader,
+            { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
+          ]}
+        >
+          <TouchableOpacity
+            onPress={() => router.replace("/(tabs)/moderatorMenu")}
+            style={{ padding: 5 }}
+          >
+            <Ionicons
+              name="arrow-back"
+              size={24}
+              color={AppColors.TEXT_LIGHT}
+            />
           </TouchableOpacity>
-          <Text style={[GlobalStyles.textBase, GlobalStyles.profileName, { marginLeft: 10 }]}>
+          <Text
+            style={[
+              GlobalStyles.textBase,
+              GlobalStyles.profileName,
+              { marginLeft: 10 },
+            ]}
+          >
             Validación de Reportes
           </Text>
         </View>
       </View>
 
-      {/* Contenedor Blanco Inferior */}
+      {/* Contenedor blanco */}
       <View style={localStyles.whiteContainer}>
-        {loading ? (
-          <ActivityIndicator size="large" color={AppColors.PRIMARY} style={{ marginTop: 50 }} />
-        ) : (
+        {/* Sin sesión */}
+        {sinSesion && (
+          <Text style={localStyles.emptyText}>
+            Debes iniciar sesión para ver tus reportes asignados.
+          </Text>
+        )}
+
+        {/* Cargando */}
+        {loading && (
+          <ActivityIndicator
+            size="large"
+            color={AppColors.PRIMARY}
+            style={{ marginTop: 50 }}
+          />
+        )}
+
+        {/* Lista */}
+        {!loading && !sinSesion && (
           <FlatList
             data={reports}
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
             contentContainerStyle={localStyles.listContainer}
             ListEmptyComponent={
-              <Text style={localStyles.emptyText}>No hay reportes para validar.</Text>
+              <View style={localStyles.emptyContainer}>
+                <Ionicons
+                  name="clipboard-outline"
+                  size={48}
+                  color="#CCC"
+                  style={{ marginBottom: 12 }}
+                />
+                <Text style={localStyles.emptyText}>
+                  No tienes reportes asignados aún.
+                </Text>
+                <Text style={localStyles.emptySubText}>
+                  El administrador te asignará reportes desde el panel web.
+                </Text>
+              </View>
             }
           />
         )}
@@ -164,8 +263,8 @@ const localStyles = StyleSheet.create({
     marginBottom: 15,
     borderWidth: 1,
     borderColor: "#E0E0E0",
-    elevation: 2, // Sombra en Android
-    shadowColor: "#000", // Sombra en iOS
+    elevation: 2,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -206,10 +305,21 @@ const localStyles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "bold",
   },
+  emptyContainer: {
+    alignItems: "center",
+    marginTop: 60,
+    paddingHorizontal: 30,
+  },
   emptyText: {
     textAlign: "center",
     color: "#999",
-    marginTop: 50,
     fontSize: 16,
+    fontWeight: "bold",
+  },
+  emptySubText: {
+    textAlign: "center",
+    color: "#BBB",
+    fontSize: 13,
+    marginTop: 6,
   },
 });

@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -15,7 +15,11 @@ import {
 import { AppColors, GlobalStyles } from "../(tabs)/GlobalStyles";
 
 // Firebase
-import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut,
+} from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../../firebaseConfigUsuarios";
 
@@ -24,6 +28,49 @@ const LoginScreen = () => {
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  // Verifica si ya hay sesión activa al abrir la app
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        // No hay sesión, mostramos el formulario
+        setCheckingSession(false);
+        return;
+      }
+
+      try {
+        const [userDoc, modDoc] = await Promise.all([
+          getDoc(doc(db, "usuarios", user.uid)),
+          getDoc(doc(db, "moderadores", user.uid)),
+        ]);
+
+        const userData = userDoc.exists()
+          ? userDoc.data()
+          : modDoc.exists()
+            ? modDoc.data()
+            : null;
+
+        if (userData?.estado === "activo") {
+          // Sesión válida, redirigimos según el rol
+          if (modDoc.exists()) {
+            router.replace("/inicioModerador");
+          } else {
+            router.replace("/inicio");
+          }
+        } else {
+          // Cuenta bloqueada o sin perfil, cerramos sesión silenciosamente
+          await signOut(auth);
+          setCheckingSession(false);
+        }
+      } catch (error) {
+        console.error("Error verificando sesión:", error);
+        setCheckingSession(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const handleLogin = async () => {
     if (!correo || !password) {
@@ -34,7 +81,6 @@ const LoginScreen = () => {
     setLoading(true);
 
     try {
-      // 1. Autenticar en Firebase Auth
       const userCredential = await signInWithEmailAndPassword(
         auth,
         correo.trim(),
@@ -42,26 +88,21 @@ const LoginScreen = () => {
       );
       const uid = userCredential.user.uid;
 
-      // 2. Obtener perfiles de Firestore (Usuarios y Moderadores)
       const userDocRef = doc(db, "usuarios", uid);
       const modDocRef = doc(db, "moderadores", uid);
 
-      // Consultamos ambas colecciones en paralelo para mejorar el rendimiento
       const [userDoc, modDoc] = await Promise.all([
         getDoc(userDocRef),
         getDoc(modDocRef),
       ]);
 
-      // --- CONDICIÓN DE SEGURIDAD: SOLO ESTADO "activo" ---
       const userData = userDoc.exists()
         ? userDoc.data()
         : modDoc.exists()
           ? modDoc.data()
           : null;
 
-      // Validamos que el perfil exista Y que su estado sea exactamente "activo"
       if (!userData || userData.estado !== "activo") {
-        // Si no cumple, cerramos la sesión de Auth inmediatamente
         await signOut(auth);
 
         let mensaje = "Tu cuenta no se encuentra activa o ha sido bloqueada.";
@@ -72,19 +113,15 @@ const LoginScreen = () => {
         setLoading(false);
         return;
       }
-      // ----------------------------------------------------
 
-      // 3. Si el estado es "activo", redirigimos según el Rol
       if (modDoc.exists()) {
         router.replace("/inicioModerador");
       } else if (userDoc.exists()) {
         router.replace("/inicio");
       }
     } catch (error: any) {
-      // Usamos ': any' para evitar el error 'error is of type unknown'
       let msg = "Error al iniciar sesión";
 
-      // Manejo de códigos de error de Firebase
       if (error?.code === "auth/invalid-credential") {
         msg = "Correo o contraseña incorrectos";
       } else if (error?.code === "auth/too-many-requests") {
@@ -99,6 +136,25 @@ const LoginScreen = () => {
       setLoading(false);
     }
   };
+
+  // Pantalla de carga mientras verifica la sesión guardada
+  if (checkingSession) {
+    return (
+      <View
+        style={[
+          GlobalStyles.container,
+          { justifyContent: "center", alignItems: "center" },
+        ]}
+      >
+        <Image
+          source={require("../../assets/images/logoMOVI.png")}
+          style={{ width: 100, height: 100, marginBottom: 20 }}
+          resizeMode="contain"
+        />
+        <ActivityIndicator size="large" color={AppColors.PRIMARY} />
+      </View>
+    );
+  }
 
   return (
     <View style={GlobalStyles.container}>
@@ -128,6 +184,7 @@ const LoginScreen = () => {
             value={password}
             onChangeText={setPassword}
           />
+
           <TouchableOpacity onPress={() => router.push("/forgotPassword")}>
             <Text style={[localStyles.forgotPassword, GlobalStyles.textBase]}>
               ¿Olvidaste tu contraseña?

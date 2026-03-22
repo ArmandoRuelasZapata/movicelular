@@ -1,44 +1,75 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { db } from "../../firebaseConfig"; //datos de base de datos firebase reportes
+import { db } from "../../firebaseConfig";
+
+// ✅ auth del proyecto 'usuarios' donde vive la sesión activa
+import { auth } from "../../firebaseConfigUsuarios";
+
 import { AppColors, GlobalStyles } from "./GlobalStyles";
 
-// --- TIPOS ---
 interface Report {
   id: string;
+  titulo?: string;
   title?: string;
+  uid?: string;
+  created_at?: { toDate: () => Date } | string | null;
   [key: string]: unknown;
 }
 
-export default function MyReportsScreen() {
-  const router = useRouter();
+// Helper para convertir created_at a Date para ordenar
+const toDate = (raw?: { toDate: () => Date } | string | null): Date => {
+  if (!raw) return new Date(0);
+  if (typeof raw === "string") return new Date(raw);
+  return raw.toDate();
+};
 
+export default function MyReportsModeratorScreen() {
+  const router = useRouter();
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [sinSesion, setSinSesion] = useState<boolean>(false);
 
   const fetchReports = async (): Promise<void> => {
+    setLoading(true);
+
+    const user = auth.currentUser;
+
+    if (!user) {
+      setSinSesion(true);
+      setLoading(false);
+      return;
+    }
+
     try {
-      const querySnapshot = await getDocs(collection(db, "reportes"));
+      // ✅ Solo filtramos por uid — sin orderBy para no necesitar índice compuesto
+      const q = query(collection(db, "reportes"), where("uid", "==", user.uid));
+      const querySnapshot = await getDocs(q);
 
       const reportsList: Report[] = querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...(doc.data() as Omit<Report, "id">),
       }));
 
+      // ✅ Ordenamos del más reciente al más antiguo en el cliente
+      reportsList.sort(
+        (a, b) =>
+          toDate(b.created_at).getTime() - toDate(a.created_at).getTime(),
+      );
+
       setReports(reportsList);
     } catch (error) {
-      console.error("Error al obtener reportes: ", error);
+      console.error("Error al obtener reportes del moderador:", error);
     } finally {
       setLoading(false);
     }
@@ -75,13 +106,24 @@ export default function MyReportsScreen() {
       </View>
 
       <View style={[GlobalStyles.menuContainer, { flex: 1 }]}>
-        {loading ? (
+        {/* Sin sesión activa */}
+        {sinSesion && (
+          <Text style={localStyles.emptyText}>
+            Debes iniciar sesión para ver tus reportes.
+          </Text>
+        )}
+
+        {/* Cargando */}
+        {loading && (
           <ActivityIndicator
             size="large"
             color={AppColors.PRIMARY}
             style={{ marginTop: 20 }}
           />
-        ) : (
+        )}
+
+        {/* Lista de reportes */}
+        {!loading && !sinSesion && (
           <FlatList<Report>
             data={reports}
             keyExtractor={(item) => item.id}
@@ -112,7 +154,9 @@ export default function MyReportsScreen() {
                       { flex: 1 },
                     ]}
                   >
-                    {item.title ?? `Reporte ${item.id.substring(0, 5)}`}
+                    {item.titulo ??
+                      item.title ??
+                      `Reporte ${item.id.substring(0, 5)}`}
                   </Text>
                   <Ionicons
                     name="chevron-forward"
@@ -123,10 +167,8 @@ export default function MyReportsScreen() {
               );
             }}
             ListEmptyComponent={
-              <Text
-                style={{ textAlign: "center", marginTop: 20, color: "gray" }}
-              >
-                No hay reportes disponibles.
+              <Text style={localStyles.emptyText}>
+                Aún no has creado ningún reporte.
               </Text>
             }
           />
@@ -145,5 +187,10 @@ const localStyles = StyleSheet.create({
   },
   backButton: {
     padding: 5,
+  },
+  emptyText: {
+    textAlign: "center",
+    marginTop: 20,
+    color: "gray",
   },
 });
