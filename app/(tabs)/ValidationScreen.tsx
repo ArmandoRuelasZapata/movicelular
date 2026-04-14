@@ -5,15 +5,14 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { db } from "../../firebaseConfig";
 
-// ✅ auth del proyecto 'usuarios' donde vive la sesión activa del moderador
 import { auth } from "../../firebaseConfigUsuarios";
 
 import { AppColors, GlobalStyles } from "../(tabs)/GlobalStyles";
@@ -22,11 +21,11 @@ interface ReportPreview {
   id: string;
   titulo?: string;
   estatus?: string;
+  estado?: string;
   moderador_asignado_uid?: string;
   created_at?: { toDate: () => Date } | string | null;
 }
 
-// ── Helpers visuales ──────────────────────────────────────────────────────────
 const getStatusColor = (estatus?: string): string => {
   switch (estatus?.toLowerCase()) {
     case "finalizado":
@@ -63,7 +62,6 @@ const formatDate = (raw?: { toDate: () => Date } | string | null): string => {
   return date.toLocaleDateString("es-MX");
 };
 
-// Helper para ordenar por fecha en el cliente
 const toDate = (raw?: { toDate: () => Date } | string | null): Date => {
   if (!raw) return new Date(0);
   if (typeof raw === "string") return new Date(raw);
@@ -83,7 +81,6 @@ export default function ValidationScreen() {
   const fetchAssignedReports = async () => {
     setLoading(true);
 
-    // ✅ Obtenemos el UID del moderador autenticado
     const user = auth.currentUser;
 
     if (!user) {
@@ -93,19 +90,19 @@ export default function ValidationScreen() {
     }
 
     try {
-      // ✅ Filtramos solo los reportes asignados a este moderador
       const q = query(
         collection(db, "reportes"),
         where("moderador_asignado_uid", "==", user.uid),
       );
       const querySnapshot = await getDocs(q);
 
-      const loadedReports: ReportPreview[] = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...(doc.data() as Omit<ReportPreview, "id">),
-      }));
+      const loadedReports: ReportPreview[] = querySnapshot.docs
+        .filter((doc) => doc.data().estado !== "desactivado") // Ocultar reportes desactivados por el admin
+        .map((doc) => ({
+          id: doc.id,
+          ...(doc.data() as Omit<ReportPreview, "id">),
+        }));
 
-      // Ordenamos del más reciente al más antiguo en el cliente
       loadedReports.sort(
         (a, b) =>
           toDate(b.created_at).getTime() - toDate(a.created_at).getTime(),
@@ -157,22 +154,12 @@ export default function ValidationScreen() {
   );
 
   return (
-    <SafeAreaView
+    <View
       style={[GlobalStyles.container, { backgroundColor: AppColors.PRIMARY }]}
     >
-      {/* Header */}
-      <View
-        style={[
-          GlobalStyles.headerContainer,
-          { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
-        ]}
-      >
-        <View
-          style={[
-            GlobalStyles.profileHeader,
-            { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
-          ]}
-        >
+      {/* HEADER */}
+      <SafeAreaView edges={["top"]} style={GlobalStyles.headerContainer}>
+        <View style={GlobalStyles.profileHeader}>
           <TouchableOpacity
             onPress={() => router.replace("/(tabs)/moderatorMenu")}
             style={{ padding: 5 }}
@@ -193,18 +180,16 @@ export default function ValidationScreen() {
             Validación de Reportes
           </Text>
         </View>
-      </View>
+      </SafeAreaView>
 
-      {/* Contenedor blanco */}
+      {/* CONTENIDO */}
       <View style={localStyles.whiteContainer}>
-        {/* Sin sesión */}
         {sinSesion && (
           <Text style={localStyles.emptyText}>
             Debes iniciar sesión para ver tus reportes asignados.
           </Text>
         )}
 
-        {/* Cargando */}
         {loading && (
           <ActivityIndicator
             size="large"
@@ -213,7 +198,6 @@ export default function ValidationScreen() {
           />
         )}
 
-        {/* Lista */}
         {!loading && !sinSesion && (
           <FlatList
             data={reports}
@@ -239,7 +223,7 @@ export default function ValidationScreen() {
           />
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

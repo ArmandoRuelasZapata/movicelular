@@ -1,19 +1,19 @@
-import React, { useState } from "react";
-import { 
-  Alert, 
-  SafeAreaView, 
-  StyleSheet, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  View, 
-  ActivityIndicator, 
-  ScrollView 
-} from "react-native";
 import { useRouter } from "expo-router";
-import { auth, db } from "../../firebaseConfigUsuarios"; 
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
+import React, { useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { auth, db } from "../../firebaseConfigUsuarios";
 
 const RegisterScreen = () => {
   const router = useRouter();
@@ -44,7 +44,11 @@ const RegisterScreen = () => {
 
     setLoading(true);
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, correo.trim(), password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        correo.trim(),
+        password,
+      );
       const user = userCredential.user;
 
       await setDoc(doc(db, "usuarios", user.uid), {
@@ -65,7 +69,7 @@ const RegisterScreen = () => {
       } else if (error.code === "auth/invalid-email") {
         errorMessage = "El formato del correo es inválido";
       }
-      
+
       Alert.alert("Error", errorMessage);
     } finally {
       setLoading(false);
@@ -75,49 +79,48 @@ const RegisterScreen = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
-        
         <Text style={styles.headerTitle}>Registro</Text>
 
         <View style={styles.form}>
           <Text style={styles.label}>Nombre:</Text>
-          <TextInput 
-            style={styles.input} 
-            value={nombre} 
-            onChangeText={setNombre} 
+          <TextInput
+            style={styles.input}
+            value={nombre}
+            onChangeText={setNombre}
             placeholder="Tu nombre completo"
           />
 
           <Text style={styles.label}>Correo electrónico</Text>
-          <TextInput 
-            style={styles.input} 
-            value={correo} 
-            onChangeText={setCorreo} 
+          <TextInput
+            style={styles.input}
+            value={correo}
+            onChangeText={setCorreo}
             keyboardType="email-address"
             autoCapitalize="none"
             placeholder="ejemplo@correo.com"
           />
 
           <Text style={styles.label}>Contraseña</Text>
-          <TextInput 
-            style={styles.input} 
-            value={password} 
-            onChangeText={setPassword} 
-            secureTextEntry 
+          <TextInput
+            style={styles.input}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
             placeholder="Mínimo 6 caracteres"
           />
 
           <Text style={styles.label}>Confirmar contraseña</Text>
-          <TextInput 
-            style={styles.input} 
-            value={confirmPassword} 
-            onChangeText={setConfirmPassword} 
-            secureTextEntry 
+          <TextInput
+            style={styles.input}
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry
             placeholder="Repite tu contraseña"
           />
 
-          <TouchableOpacity 
-            style={styles.button} 
-            onPress={handleRegister} 
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleRegister}
             disabled={loading}
           >
             {loading ? (
@@ -129,12 +132,13 @@ const RegisterScreen = () => {
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>¿Ya tienes una cuenta? </Text>
-            <TouchableOpacity onPress={() => router.push("/(tabs)/LoginScreen")}>
+            <TouchableOpacity
+              onPress={() => router.push("/(tabs)/LoginScreen")}
+            >
               <Text style={styles.linkText}>Iniciar sesión</Text>
             </TouchableOpacity>
           </View>
         </View>
-
       </ScrollView>
     </SafeAreaView>
   );

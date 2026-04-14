@@ -5,7 +5,7 @@ import {
   doc,
   onSnapshot,
   serverTimestamp,
-  updateDoc
+  updateDoc,
 } from "firebase/firestore";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -16,7 +16,6 @@ import {
   Modal,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -24,6 +23,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { AppColors, GlobalStyles } from "../(tabs)/GlobalStyles";
 import { db } from "../../firebaseConfig";
 

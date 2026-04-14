@@ -9,7 +9,6 @@ import {
   Alert,
   Image,
   Modal,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,6 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { AppColors, GlobalStyles } from "./GlobalStyles";
 
 // ✅ auth viene del proyecto 'usuarios' (donde se hace el login)
@@ -408,7 +408,7 @@ const ReportsScreen = () => {
 
           <TouchableOpacity
             style={styles.cancelButton}
-            onPress={() => router.replace("/inicio")}
+            onPress={() => router.replace("/(tabs)/inicio")}
             disabled={sending}
           >
             <Text style={styles.cancelButtonText}>Cancelar</Text>

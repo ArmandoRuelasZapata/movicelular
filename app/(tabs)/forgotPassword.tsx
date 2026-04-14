@@ -2,16 +2,16 @@ import { useRouter } from "expo-router";
 import { sendPasswordResetEmail } from "firebase/auth"; // Importación necesaria
 import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { auth } from "../../firebaseConfigUsuarios";
 
 const ForgotPassword = () => {

@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { FirebaseApp, getApps, initializeApp } from "firebase/app";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
+// @ts-ignore
+import { getReactNativePersistence, initializeAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
@@ -21,26 +22,9 @@ if (getApps().find((a) => a.name === "usuarios")) {
   appUsuarios = initializeApp(firebaseConfigUsuarios, "usuarios");
 }
 
-export const auth = getAuth(appUsuarios);
+export const auth = initializeAuth(appUsuarios, {
+  persistence: getReactNativePersistence(AsyncStorage),
+});
+
 export const db = getFirestore(appUsuarios);
 export const storage = getStorage(appUsuarios);
-
-// Persiste la sesión manualmente con AsyncStorage
-// Firebase guarda internamente el token, esto lo refuerza para React Native
-const AUTH_PERSISTENCE_KEY = "@auth_user";
-
-// Al iniciar, restauramos el estado si existe
-AsyncStorage.getItem(AUTH_PERSISTENCE_KEY).catch(() => null);
-
-// Escucha cambios de sesión y los guarda/elimina en AsyncStorage
-onAuthStateChanged(auth, async (user) => {
-  try {
-    if (user) {
-      await AsyncStorage.setItem(AUTH_PERSISTENCE_KEY, user.uid);
-    } else {
-      await AsyncStorage.removeItem(AUTH_PERSISTENCE_KEY);
-    }
-  } catch (error) {
-    console.error("Error persistiendo sesión:", error);
-  }
-});

@@ -5,13 +5,13 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { AppColors, GlobalStyles } from "../(tabs)/GlobalStyles";
 
 // Firebase

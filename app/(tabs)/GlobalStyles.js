@@ -12,37 +12,55 @@ export const AppColors = {
   TEXT_LIGHT: "white",
   TEXT_DARK: "#333",
   ICON_SEARCH: "#666",
-  // Añadimos un color para el borde o separator si no existe
   SEPARATOR: "#E0E0E0",
 };
 
 export const GlobalStyles = StyleSheet.create({
-  // Tipografía Base: ESTÁS USANDO CORRECTAMENTE 'Arimo-Regular'
+  // Tipografía Base
   textBase: {
     fontFamily: "Arimo-Regular",
   },
-  // ... (Resto de estilos de navegación y contenedor) ...
+
   container: {
     flex: 1,
     backgroundColor: AppColors.BACKGROUND,
   },
   headerContainer: {
     backgroundColor: AppColors.PRIMARY,
-    paddingTop: Constants.statusBarHeight,
+    paddingTop: Constants.statusBarHeight * 0.3,
   },
+
+  // ✅ CORREGIDO: height fijo para evitar colapso en Mapbox,
+  // borderRadius actualizado a 10, padding y sombra consistentes
+  // con los estilos locales de MapScreen y MapScreenModerador.
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: AppColors.BACKGROUND,
-    borderRadius: 8,
+    backgroundColor: AppColors.BACKGROUND, // "#fff" garantizado
+    borderRadius: 10,
     margin: 10,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
+    height: 46, // ← evita que colapse en Mapbox
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
+
+  // ✅ CORREGIDO: fontSize y color alineados con los estilos locales.
+  // Nota: placeholderTextColor NO es una prop de StyleSheet; debe
+  // pasarse directamente al <TextInput> como prop. Se deja aquí
+  // el estilo base del input y el comentario para recordarlo.
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15, // era 16, ajustado a 15 para consistencia
     color: AppColors.TEXT_DARK,
+    // ⚠️ Recuerda agregar en tu <TextInput>:
+    //   placeholderTextColor="#999"
+    //   returnKeyType="search"
   },
+
   searchIcon: {
     marginRight: 8,
   },
@@ -113,7 +131,7 @@ export const GlobalStyles = StyleSheet.create({
     paddingVertical: 15,
     paddingHorizontal: 20,
     borderBottomColor: AppColors.SEPARATOR,
-    borderBottomWidth: StyleSheet.hairlineWidth, // Usar hairlineWidth para una línea fina
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   menuItemText: {
     fontSize: 16,
@@ -125,18 +143,18 @@ export const GlobalStyles = StyleSheet.create({
     borderBottomWidth: 0,
   },
 
-  // --- 4. ESTILOS DEL MODAL (NUEVOS) ---
+  // --- ESTILOS DEL MODAL ---
   centeredView: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)", // Fondo semitransparente
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   modalView: {
     margin: 20,
     backgroundColor: "white",
     borderRadius: 10,
-    padding: 20, // Reducido ligeramente para ajustarse a la imagen
+    padding: 20,
     alignItems: "stretch",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -149,8 +167,6 @@ export const GlobalStyles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    // La imagen no muestra un título, solo el cuerpo y el botón de cierre.
-    // Podríamos quitar el título, pero lo mantengo por si lo necesitas:
     marginBottom: 15,
   },
   modalTitle: {
@@ -159,21 +175,20 @@ export const GlobalStyles = StyleSheet.create({
     color: AppColors.TEXT_DARK,
   },
   modalText: {
-    // Texto de la misión
     textAlign: "justify",
     fontSize: 15,
     lineHeight: 20,
     color: AppColors.TEXT_DARK,
   },
   closeButton: {
-    // Estilo para posicionar el botón 'x' en la esquina
     position: "absolute",
     top: -5,
     right: -2,
-    zIndex: 10, // Asegura que esté por encima de otros elementos
+    zIndex: 10,
     padding: 5,
   },
 });
 
 export { ASPECT_RATIO, height, width };
 
+export default {};

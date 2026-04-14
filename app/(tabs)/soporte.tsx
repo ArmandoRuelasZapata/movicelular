@@ -1,29 +1,28 @@
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
 import {
-    collection,
-    doc,
-    getDoc,
-    getDocs,
-    orderBy,
-    query,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
 } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-// IMPORTANTE: dbSoporte para las guías, db y auth normales para el perfil
 import { dbSoporte } from "../../firebaseConfigSoporte";
 import { auth, db } from "../../firebaseConfigUsuarios";
 
@@ -42,7 +41,6 @@ export default function SoporteScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [guiaSeleccionada, setGuiaSeleccionada] = useState<Guia | null>(null);
 
-  // 1. OBTENER NOMBRE (Usa la DB de usuarios)
   useEffect(() => {
     const fetchModData = async () => {
       const user = auth.currentUser;
@@ -60,14 +58,10 @@ export default function SoporteScreen() {
     fetchModData();
   }, []);
 
-  // 2. DESCARGAR GUÍAS (Usa la DB de soporte)
   const fetchGuias = async () => {
     try {
       setLoading(true);
-      // Usamos dbSoporte que apunta al proyecto 'asistencia-movidgo'
       const guiasRef = collection(dbSoporte, "guias_soporte");
-
-      // NOTA: Si da error de 'indices', quita el orderBy temporalmente
       const q = query(guiasRef, orderBy("fecha_creacion", "desc"));
       const querySnapshot = await getDocs(q);
 
@@ -80,7 +74,6 @@ export default function SoporteScreen() {
       setGuias(lista);
     } catch (error: any) {
       console.error("Error en asistencia-movidgo:", error);
-      // Si el error es 'failed-precondition', necesitas crear un índice en la consola
       Alert.alert("Error", "No se pudieron cargar las guías de soporte.");
     } finally {
       setLoading(false);
@@ -96,15 +89,20 @@ export default function SoporteScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.mainContainer}>
+    <View style={styles.mainContainer}>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push("/(tabs)/explore")}>
-          <Ionicons name="arrow-back" size={28} color="white" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Soporte</Text>
-      </View>
 
+      {/* HEADER con SafeAreaView solo arriba */}
+      <SafeAreaView edges={["top"]} style={styles.headerSafeArea}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.push("/(tabs)/explore")}>
+            <Ionicons name="arrow-back" size={28} color="white" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Soporte</Text>
+        </View>
+      </SafeAreaView>
+
+      {/* CONTENIDO */}
       <View style={styles.whiteCard}>
         <View style={styles.centerContent}>
           <Text style={styles.welcomeText}>Hola, {userName}</Text>
@@ -172,18 +170,23 @@ export default function SoporteScreen() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
-// ... (tus estilos se mantienen igual)
 const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: "#008080" },
+  mainContainer: {
+    flex: 1,
+    backgroundColor: "#008080",
+  },
+  headerSafeArea: {
+    backgroundColor: "#008080",
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 20,
-    paddingTop: 50,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
   },
   headerTitle: {
     color: "white",

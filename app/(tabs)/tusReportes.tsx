@@ -5,15 +5,14 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { db } from "../../firebaseConfig";
 
-// ✅ auth del proyecto 'usuarios' donde vive la sesión activa
 import { auth } from "../../firebaseConfigUsuarios";
 
 import { AppColors, GlobalStyles } from "./GlobalStyles";
@@ -22,11 +21,11 @@ interface Report {
   id: string;
   titulo?: string;
   uid?: string;
+  estado?: string;
   created_at?: { toDate: () => Date } | string | null;
   [key: string]: unknown;
 }
 
-// Helper para convertir created_at a Date para ordenar
 const toDate = (raw?: { toDate: () => Date } | string | null): Date => {
   if (!raw) return new Date(0);
   if (typeof raw === "string") return new Date(raw);
@@ -51,16 +50,16 @@ export default function MyReportsScreen() {
     }
 
     try {
-      // ✅ Solo filtramos por uid — sin orderBy para no necesitar índice compuesto
       const q = query(collection(db, "reportes"), where("uid", "==", user.uid));
       const querySnapshot = await getDocs(q);
 
-      const reportsList: Report[] = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...(doc.data() as Omit<Report, "id">),
-      }));
+      const reportsList: Report[] = querySnapshot.docs
+        .filter((doc) => doc.data().estado !== "desactivado") // Ocultar reportes desactivados por el admin
+        .map((doc) => ({
+          id: doc.id,
+          ...(doc.data() as Omit<Report, "id">),
+        }));
 
-      // ✅ Ordenamos del más reciente al más antiguo en el cliente
       reportsList.sort(
         (a, b) =>
           toDate(b.created_at).getTime() - toDate(a.created_at).getTime(),
@@ -79,8 +78,9 @@ export default function MyReportsScreen() {
   }, []);
 
   return (
-    <SafeAreaView style={GlobalStyles.container}>
-      <View style={GlobalStyles.headerContainer}>
+    <View style={GlobalStyles.container}>
+      {/* HEADER */}
+      <SafeAreaView edges={["top"]} style={GlobalStyles.headerContainer}>
         <View style={localStyles.headerContent}>
           <TouchableOpacity
             onPress={() => router.push("/explore")}
@@ -102,17 +102,16 @@ export default function MyReportsScreen() {
             Tus Reportes
           </Text>
         </View>
-      </View>
+      </SafeAreaView>
 
+      {/* CONTENIDO */}
       <View style={[GlobalStyles.menuContainer, { flex: 1 }]}>
-        {/* Sin sesión activa */}
         {sinSesion && (
           <Text style={localStyles.emptyText}>
             Debes iniciar sesión para ver tus reportes.
           </Text>
         )}
 
-        {/* Cargando */}
         {loading && (
           <ActivityIndicator
             size="large"
@@ -121,7 +120,6 @@ export default function MyReportsScreen() {
           />
         )}
 
-        {/* Lista de reportes */}
         {!loading && !sinSesion && (
           <FlatList<Report>
             data={reports}
@@ -169,7 +167,7 @@ export default function MyReportsScreen() {
           />
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

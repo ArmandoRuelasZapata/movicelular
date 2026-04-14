@@ -1,5 +1,7 @@
-import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getApps, initializeApp } from "firebase/app";
+// @ts-ignore
+import { getReactNativePersistence, initializeAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfigSoporte = {
@@ -12,7 +14,11 @@ const firebaseConfigSoporte = {
   measurementId: "G-FG8F7DREKM",
 };
 
-// Inicializamos una segunda instancia de Firebase
-const appSoporte = initializeApp(firebaseConfigSoporte, "soporteApp");
+const appSoporte =
+  getApps().find((a) => a.name === "soporteApp") ??
+  initializeApp(firebaseConfigSoporte, "soporteApp");
+
 export const dbSoporte = getFirestore(appSoporte);
-export const authSoporte = getAuth(appSoporte);
+export const authSoporte = initializeAuth(appSoporte, {
+  persistence: getReactNativePersistence(AsyncStorage),
+});

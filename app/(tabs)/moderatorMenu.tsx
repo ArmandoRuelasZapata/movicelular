@@ -3,14 +3,14 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Modal,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { AppColors, GlobalStyles } from "../(tabs)/GlobalStyles";
 
@@ -223,7 +223,7 @@ const MenuModerator: React.FC = () => {
                 source={
                   profileImage
                     ? { uri: profileImage }
-                    : require("../../assets/images/perfil.png")
+                    : require("../../assets/images/usuario.png")
                 }
                 style={GlobalStyles.profileAvatar}
               />
